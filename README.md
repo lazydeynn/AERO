@@ -17,3 +17,11 @@ DB_NAME=your_db_name
 SMTP_HOST=smtp.gmail.com
 SMTP_EMAIL=your_email@gmail.com
 SMTP_PASS=your_google_app_password
+```
+## 🗄️ Database Setup
+The database file (aero_db.sql) is included in this folder. Follow these steps to import it into your local XAMPP:
+
+1. Download the `aero_db.sql` file located in this folder.
+2. Go to **phpMyAdmin** and create a new database named `aero_db`.
+3. Select `aero_db`, go to the **Import** tab.
+4. Upload the `aero_db.sql` file.
