@@ -1,0 +1,178 @@
+<?php
+session_start();
+include '../config/db_conn.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../auth/login.php");
+    exit;
+}
+
+if (!isset($_GET['quiz_id'])) {
+    header("Location: downloads.php");
+    exit;
+}
+
+$user_id = $_SESSION['user_id'];
+$quiz_id = (int)$_GET['quiz_id'];
+
+$sql = "SELECT q.*, t.title, t.content_description, l.name as language_name 
+        FROM generated_quizzes q 
+        JOIN topics t ON q.topic_id = t.topic_id 
+        JOIN languages l ON t.language_id = l.language_id 
+        WHERE q.quiz_id = $quiz_id AND q.user_id = $user_id";
+$result = $conn->query($sql);
+
+if ($result->num_rows == 0) {
+    die("File not found or access denied.");
+}
+
+$data = $result->fetch_assoc();
+$filename = "AERO_StudyGuide_" . preg_replace('/[^a-zA-Z0-9]/', '_', $data['title']) . ".html";
+
+$qSql = "SELECT * FROM quiz_questions WHERE quiz_id = $quiz_id";
+$questions = $conn->query($qSql);
+
+header("Content-Type: text/html");
+header("Content-Disposition: attachment; filename=\"$filename\"");
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title><?php echo $data['title']; ?> - Study Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #1e1e1e;
+        }
+
+        .meta {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .score-box {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .topic-summary {
+            background: #eef2ff;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #4f46e5;
+            margin-bottom: 40px;
+        }
+
+        .question-card {
+            background: #fff;
+            border: 1px solid #eee;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            page-break-inside: avoid;
+        }
+
+        .q-text {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .options {
+            list-style: none;
+            padding: 0;
+        }
+
+        .options li {
+            padding: 5px 0;
+            font-size: 14px;
+        }
+
+        .correct {
+            color: #166534;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="logo">AERO</div>
+        <h1><?php echo $data['title']; ?></h1>
+        <div class="meta">
+            Language: <?php echo $data['language_name']; ?> | Date: <?php echo date("F j, Y", strtotime($data['date_taken'])); ?>
+        </div>
+        <div class="score-box">
+            Score: <?php echo $data['score']; ?> / <?php echo $data['total_items']; ?>
+        </div>
+    </div>
+
+    <div class="topic-summary">
+        <h3>Topic Overview</h3>
+        <p><?php echo !empty($data['content_description']) ? $data['content_description'] : "Review the questions below to master this topic."; ?></p>
+    </div>
+
+    <h3>Review Questions</h3>
+
+    <?php
+    $i = 1;
+    while ($q = $questions->fetch_assoc()):
+        $ans = $q['correct_option'];
+    ?>
+        <div class="question-card">
+            <div class="q-text"><?php echo $i++; ?>. <?php echo $q['question_text']; ?></div>
+            <ul class="options">
+                <li <?php echo ($ans == 'A') ? 'class="correct"' : ''; ?>>A) <?php echo $q['option_a']; ?></li>
+                <li <?php echo ($ans == 'B') ? 'class="correct"' : ''; ?>>B) <?php echo $q['option_b']; ?></li>
+                <li <?php echo ($ans == 'C') ? 'class="correct"' : ''; ?>>C) <?php echo $q['option_c']; ?></li>
+                <li <?php echo ($ans == 'D') ? 'class="correct"' : ''; ?>>D) <?php echo $q['option_d']; ?></li>
+            </ul>
+            <div style="margin-top:10px; font-size:12px; color:#666;">
+                <em>Correct Answer: <strong>Option <?php echo $ans; ?></strong></em>
+            </div>
+        </div>
+    <?php endwhile; ?>
+
+    <div class="footer">
+        Generated by AERO (AI Educational Resource Organizer) for Offline Study.
+    </div>
+
+</body>
+
+</html>
